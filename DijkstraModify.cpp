@@ -1,55 +1,56 @@
 #include<iostream>
-#include<vector>
-#include <algorithm>
-#define N 6 //表示有5个顶点 
+#include<vector> 
+#define N 6 //表示有N个顶点 
 #define MAX 65535
 using namespace std;
 
-bool SingleSourceSP(int edge[][N],int source,int SL[],int SP[]){
-	int i,v;
-	int sl;
-	vector<int> VS;
-	for(i=0;i<N;i++){
-		VS.push_back(i);
-		SL[i]=edge[source][i];
-		if(SL[i]<MAX) SP[i]=source;//存放最短路径的前驱点
-		else SP[i]=-1;
+bool judgeMark (bool mark[]) { //若所有节点都在S集合中，则返回true 
+	for (int i = 0; i < N; i++) {
+		if (mark[i] == 0)
+			return false;
 	}
-	VS.erase(find(VS.begin(),VS.end(),source));
-	SP[source]=-1;
-	int count=0;
-	while(!VS.empty()){
-		
-		for(i=0;i<N;i++){
-			cout<<SL[i]<<" ";
+	return true;
+}
+
+bool DijkstraModify(int edge[][N],int source,int SL[],int SP[]) {
+	//soure表示源点，SL[i]存放源点到第i号节点的最短路径值，若无则为MAX。SP[i]存放从源点到i节点的最短路径的前驱节点，若无则为-1
+	bool *mark = new bool[N]; //标记过（值为1）的结点表示已经进入S集合中，值为0的结点表示在V-S集合中
+	int *count = new int[N];//count[i] 表示从源点到该结点i的最短路径所经过的所有节点的个数 
+	int i;
+	for (i = 0;i < N;i++) {
+		mark[i] = 0;
+		SL[i] = edge[source][i];
+		if(SL[i]<MAX) {
+			SP[i] = source; //存放最短路径的前驱点
+			count[i] = 2; 
+		} 
+		else SP[i] = -1;
+	}
+	mark[source] = 1;  //先从V集合中取出源点到S集合（这个过程就是标记） 
+	SP[source] = -1;
+	int v; //其值为V-S集合中 SL值最小的结点，即 SL[v] = min{SL[i]} (i在S-V集合内） 
+	bool marked = judgeMark(mark); //判断所有节点是否都被标记，即判断所有节点是否都在S集合中 
+	while(!marked){
+		int sl = MAX; 
+		for (i = 0;i < N;i++){
+			if (mark[i] == 0 && sl > SL[i]) { //取出未被标记的节点中SL值最小的结点（Dijkstra本质上就是贪心算法） 
+				sl = SL[i];
+				v = i; 
+			} 
 		}
-		cout<<"\n";
-		for(i=0;i<VS.size();i++){
-			cout<<VS[i]<<" ";
-		}
-		cout<<"\n";
-		
-		sl=MAX;
-		for(i=0;i<VS.size();i++){
-			if(sl>SL[VS[i]]){
-				sl=SL[VS[i]];
-				v=i;
+		mark[v] = 1; //将该结点放入S集合中 
+		for(i = 0;i < N;i++){ //对所有点做松弛操作 
+			sl = SL[v] + edge[v][i];
+			if (sl < SL[i]){  
+				SL[i] = sl;
+				SP[i] = v;
+				count[i] = count[v] + 1; //当前source到结点i的最短路径中i的前驱节点为v
+				if (count[i] > N) return false; //最短路径的节点数最大值为N，超过N说明存在负环 
+				mark[i] = 0; //同时节点i要放回V-S集合中，因为该结点可能会改进其他节点的最短路径。 
 			}
 		}
-		for(i=0;i<N;i++){
-			sl=SL[VS[v]]+edge[VS[v]][i];
-			if(sl<SL[i]){
-				SL[i]=sl;
-				SP[i]=VS[v];
-				if(find(VS.begin(),VS.end(),i)==VS.end()){
-					VS.push_back(i);
-				}
-			}
-		}
-		VS.erase(VS.begin()+v);
-		if(++count>=3*N) return false;
+		marked = judgeMark(mark); //判断所有节点是否都在S集合中，若在，则表明所有节点的最短路径已找到 
 	}
-	cout<<"count:"<<count<<endl;
 	return true;
 }
 
@@ -119,7 +120,7 @@ int main(){
 		{MAX,MAX,MAX,MAX,-8,0}
 	};
 	int SL[N],SP[N];
-	if(SingleSourceSP(edge,0,SL,SP)){
+	if(DijkstraModify(edge,0,SL,SP)){
 		print_ShortestPath(SL,SP,V,0);
 	}
 	else{
@@ -127,3 +128,4 @@ int main(){
 	}
 	return 0;
 }
+
